@@ -15,14 +15,20 @@ class CiAonemaBot(commands.Bot):
         super().__init__(command_prefix="!", intents=intents)
 
     async def setup_hook(self):
+        # os.walk travels down through every subfolder recursively
         for root, dirs, files in os.walk("./cogs"):
             for filename in files:
                 if filename.endswith(".py"):
+                    # 1. Convert the system path syntax into python module dots
                     clean_root = root.replace("\\", ".").replace("/", ".")
-                    if clean_root.startswith("."):
+                    
+                    # 2. STRIP LEADING DOTS (Fixes the ExtensionNotFound error)
+                    while clean_root.startswith("."):
                         clean_root = clean_root[1:]
                         
+                    # 3. Combine folder path with the filename (removing the .py extension)
                     module_path = f"{clean_root}.{filename[:-3]}"
+                    
                     await self.load_extension(module_path)
                     print(f"Loaded extension: {module_path}")
 
