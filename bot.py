@@ -35,15 +35,15 @@ class CiAonemaBot(commands.Bot):
     async def on_ready(self):
         print(f'Logged in as {self.user}')
         
-        # --- RICH PRESENCE STATUS SETUP ---
-        # This tells Discord to display "Watching CiAonema" under the bot's name
-        custom_activity = discord.Activity(
-            type=discord.ActivityType.watching, 
-            name="CiAonema"
-        )
-        await self.change_presence(activity=custom_activity)
-        print("Rich Presence status set successfully!")
-        # ----------------------------------
+        # --- DYNAMIC CUSTOM STATUS ---
+        # It reads from Render's Environment variables. 
+        # If the variable isn't found, it defaults to "Watching CiAonema"
+        status_text = os.environ.get("BOT_STATUS")
+        
+        custom_status = discord.CustomActivity(name=status_text)
+        await self.change_presence(activity=custom_status)
+        print(f"Custom Status dynamically set to: {status_text}")
+        # -----------------------------
 
         try:
             synced = await self.tree.sync()

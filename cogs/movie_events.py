@@ -6,6 +6,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from dateutil import parser
+# zoneinfo is built into Python 3.9+ for proper timezone handling
+from zoneinfo import ZoneInfo 
 
 class MovieEvents(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -59,7 +61,6 @@ class MovieEvents(commands.Cog):
 
         return {"name": f"{title} ({year})", "description": f"Runtime de {runtime} minutos.", "image": image_bytes}
 
-    # Slash commands inside Cogs use @app_commands.command() instead of @bot.tree.command()
     @app_commands.command(name="schedule_movie", description="Creates a server movie event using a TMDB link.")
     @app_commands.default_permissions(administrator=True)
     @app_commands.describe(tmdb_url="The TMDB link to the movie", datetime_str="Date and time of the event", channel="The voice channel")
@@ -71,16 +72,24 @@ class MovieEvents(commands.Cog):
             except (ValueError, OverflowError):
                 raise ValueError("Could not understand date format. Try: YYYY-MM-DD HH:MM")
                 
-            start_time = naive_dt.replace(tzinfo=datetime.timezone.utc)
-            end_time = start_time + datetime.timedelta(hours=2, minutes=30)
+            # 1. FIX THE TIMEZONE SHIFT
+            # This forces Python to interpret your date string as your local time zone (e.g., Europe/Lisbon)
+            # Instead of replacing it with raw UTC, it mathematically shifts it correctly for Discord
+            local_tz = ZoneInfo("Europe/Lisbon")
+            start_time = naive_dt.replace(tzinfo=local_tz)
 
             movie = self.get_movie_data(tmdb_url)
             guild = interaction.guild
             
+            # 2. REMOVED end_time FROM THE METHOD ARGUMENTS BELOW 👇
             scheduled_event = await guild.create_scheduled_event(
-                name=movie["name"], description=movie["description"], start_time=start_time,
-                end_time=end_time, entity_type=discord.EntityType.voice, channel=channel,
-                image=movie["image"], privacy_level=discord.PrivacyLevel.guild_only
+                name=movie["name"], 
+                description=movie["description"], 
+                start_time=start_time,
+                entity_type=discord.EntityType.voice, 
+                channel=channel,
+                image=movie["image"], 
+                privacy_level=discord.PrivacyLevel.guild_only
             )
             await interaction.followup.send(f"🎬 **Event Created!**\n**Title:** {movie['name']}\n**Channel:** {channel.mention}\n**Link:** {scheduled_event.url}")
         except Exception as e:
