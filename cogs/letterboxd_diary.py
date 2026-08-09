@@ -47,14 +47,21 @@ class LetterboxdCog(commands.Cog):
 
         try:
             response = requests.get(
-                url,
-                impersonate="chrome120",
-                allow_redirects=True,
-                headers={
-                    "Accept-Language": "en-US,en;q=0.9",
-                },
-                timeout=10,
-            )
+            url,
+            impersonate="chrome120",
+            allow_redirects=True,
+            headers={
+                "Accept-Language": "en-US,en;q=0.9",
+            },
+            timeout=10,
+        )
+
+            print(f"[AVATAR DEBUG] Status: {response.status_code}", flush=True)
+            print(f"[AVATAR DEBUG] URL: {response.url}", flush=True)
+            print(f"[AVATAR DEBUG] Content-Type: {response.headers.get('Content-Type')}", flush=True)
+            print(f"[AVATAR DEBUG] Length: {len(response.content)}", flush=True)
+            print(f"[AVATAR DEBUG] Server: {response.headers.get('Server')}", flush=True)
+            print(f"[AVATAR DEBUG] Preview: {response.text[:300]}", flush=True)
 
             if response.status_code != 200:
                 return None
