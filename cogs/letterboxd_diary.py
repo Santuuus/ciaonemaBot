@@ -43,14 +43,13 @@ class LetterboxdCog(commands.Cog):
                 pass
 
     def get_user_avatar(self, username: str) -> str | None:
-        # Standardize the user profile URL
         url = f"https://letterboxd.com/{username.strip('/')}/"
 
         try:
             response = requests.get(
                 url,
                 impersonate="chrome120",
-                allow_redirects=True,  # <--- Changed from follow_redirects
+                allow_redirects=True,
                 headers={
                     "Accept-Language": "en-US,en;q=0.9",
                 },
@@ -58,60 +57,19 @@ class LetterboxdCog(commands.Cog):
             )
 
             if response.status_code != 200:
-                print(
-                    f"[AVATAR LOG] Status {response.status_code} for user {username}",
-                    flush=True,
-                )
                 return None
 
             soup = BeautifulSoup(response.text, "html.parser")
 
-            # 1. OpenGraph Meta Tag (Most reliable for custom avatars)
-            og_image = soup.find("meta", property="og:image")
-            if og_image and og_image.get("content"):
-                avatar_url = og_image["content"]
-                if "empty-avatar" not in avatar_url:
-                    return avatar_url
+            avatar_img = soup.select_one(".profile-avatar img")
 
-            # 2. Twitter Meta Tag
-            twitter_image = soup.find("meta", attrs={"name": "twitter:image"})
-            if twitter_image and twitter_image.get("content"):
-                if "empty-avatar" not in twitter_image["content"]:
-                    return twitter_image["content"]
-
-            # 3. DOM Search: Look for img tag inside profile header
-            avatar_img = soup.select_one(
-                ".profile-avatar img, .avatar img, section.profile-header img"
-            )
             if avatar_img:
-                candidate = (
-                    avatar_img.get("srcset")
-                    or avatar_img.get("data-src")
-                    or avatar_img.get("src")
-                )
-                if candidate:
-                    first_url = candidate.split(",")[-1].strip().split(" ")[0]
-                    if first_url.startswith("//"):
-                        first_url = "https:" + first_url
-                    elif first_url.startswith("/"):
-                        first_url = "https://letterboxd.com" + first_url
-                    return first_url
-
-            # 4. Regex Fallback: Scan raw HTML for avatar CDN patterns
-            match = re.search(
-                r'https://a\.ltrbxd\.com/resized/avatar/[^\s"\'<>]+', response.text
-            )
-            if match:
-                return match.group(0)
+                return avatar_img.get("src")
 
         except Exception as e:
-            print(
-                f"[AVATAR ERROR] Exception while fetching avatar for {username}: {e}",
-                flush=True,
-            )
+            print(f"[AVATAR ERROR] {username}: {e}", flush=True)
 
         return None
-
     # --- Embed Helper ---
     def create_entry_embed(self, username: str, entry):
         # --- 1. Parse Metadata ---
