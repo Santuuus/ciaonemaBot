@@ -186,7 +186,7 @@ class LetterboxdCog(commands.Cog):
         return embed
 
     # --- Feed Checker Task ---
-    @tasks.loop(minutes=1)
+    @tasks.loop(hours=1)
     async def check_letterboxd_feeds(self):
         # Fetch all active subscriptions from Supabase
         response = supabase.table("letterboxd_subscriptions").select("*").execute()
