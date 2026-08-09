@@ -78,7 +78,7 @@ class LetterboxdCog(commands.Cog):
 
         return None
     # --- Embed Helper ---
-    def create_entry_embed(self, username: str, entry):
+    def create_entry_embed(self, username: str, entry, avatar_url=None):
         # --- 1. Parse Metadata ---
         film_title = entry.get("letterboxd_filmtitle", "A Film")
         film_year = entry.get("letterboxd_filmyear", "")
@@ -117,9 +117,6 @@ class LetterboxdCog(commands.Cog):
 
         img_tag = soup.find("img")
         poster_url = img_tag["src"] if img_tag else None
-
-        # Fetch User Avatar
-        avatar_url = self.get_user_avatar(username)
 
         # Extract clean text paragraphs (excluding image descriptions)
         paragraphs = [p.get_text().strip() for p in soup.find_all("p") if not p.find("img")]
@@ -168,6 +165,7 @@ class LetterboxdCog(commands.Cog):
             channel_id = int(sub["channel_id"])
             username = sub["username"]
             last_posted_iso = sub["last_posted_at"]
+            avatar_url = sub.get("avatar_url")
 
             channel = self.bot.get_channel(channel_id)
             if not channel:
@@ -193,7 +191,7 @@ class LetterboxdCog(commands.Cog):
                 entry_dt = parser.parse(entry.published)
 
                 if entry_dt > last_posted_dt:
-                    embed = self.create_entry_embed(username, entry)
+                    embed = self.create_entry_embed(username, entry, avatar_url)
                     try:
                         await channel.send(embed=embed)
                         if entry_dt > latest_processed_dt:
@@ -211,13 +209,13 @@ class LetterboxdCog(commands.Cog):
     async def before_check(self):
         await self.bot.wait_until_ready()
 
-    # --- Commands ---
-    @app_commands.command(name="follow", description="Segue um utilizador do letterboxd neste canal.")
+   # --- Commands ---
+
+    @app_commands.command(name="follow",description="Segue um utilizador do letterboxd neste canal.")
     @app_commands.describe(username="Utilizador a seguir")
     @app_commands.default_permissions(administrator=True)
     async def follow(self, interaction: discord.Interaction, username: str):
         clean_user = username.strip().lower()
-        avatar = self.get_user_avatar(username)
         channel_id = str(interaction.channel_id)
 
         # Check if already followed in Supabase
@@ -235,7 +233,10 @@ class LetterboxdCog(commands.Cog):
             return
 
         # Validate feed existence
-        feed = feedparser.parse(f"https://letterboxd.com/{clean_user}/rss/")
+        feed = feedparser.parse(
+            f"https://letterboxd.com/{clean_user}/rss/"
+        )
+
         if feed.bozo or not hasattr(feed, "status") or feed.status != 200:
             await interaction.response.send_message(
                 f"Não encontrei o utilizador (**{clean_user}**).",
@@ -243,9 +244,14 @@ class LetterboxdCog(commands.Cog):
             )
             return
 
+        # Get avatar
+        avatar = self.get_user_avatar(clean_user)
+
         # Initialize latest timestamp
         if feed.entries and "published" in feed.entries[0]:
-            initial_iso = parser.parse(feed.entries[0].published).isoformat()
+            initial_iso = parser.parse(
+                feed.entries[0].published
+            ).isoformat()
         else:
             initial_iso = datetime.now(timezone.utc).isoformat()
 
@@ -253,14 +259,18 @@ class LetterboxdCog(commands.Cog):
         supabase.table("letterboxd_subscriptions").insert({
             "channel_id": channel_id,
             "username": clean_user,
-            "last_posted_at": initial_iso
+            "last_posted_at": initial_iso,
+            "avatar_url": avatar
         }).execute()
 
         embed = discord.Embed(
             description=f"A seguir **{clean_user}**.",
             colour=0x800020
         )
-        embed.set_thumbnail(url=avatar)
+
+        if avatar:
+            embed.set_thumbnail(url=avatar)
+
         await interaction.response.send_message(embed=embed)
 
 
@@ -314,6 +324,30 @@ class LetterboxdCog(commands.Cog):
             color=0x800020
         )
         await interaction.response.send_message(embed=embed)
+
+    @app_commands.command( name="refresh",description="Atualiza o avatar de um utilizador.")
+    @app_commands.describe(username="Utilizador do Letterboxd")
+    async def refresh_avatar(
+        self,
+        interaction: discord.Interaction,
+        username: str
+    ):
+        clean_user = username.strip().lower()
+
+        await interaction.response.defer(ephemeral=True)
+
+        success = self.refresh_user_avatar(clean_user)
+
+        if success:
+            await interaction.followup.send(
+                f"Avatar de **{clean_user}** atualizado com sucesso!",
+                ephemeral=True
+            )
+        else:
+            await interaction.followup.send(
+                f"Não foi possível atualizar o avatar de **{clean_user}**.",
+                ephemeral=True
+            )   
 
     @app_commands.command(name="test", description="Testar se o bot consegue publicar a entrada mais recente de um utilizador.")
     @app_commands.describe(username="The Letterboxd username to test")
