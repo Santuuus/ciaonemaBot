@@ -1,8 +1,6 @@
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
-import re
-import requests
 import cloudscraper
 import feedparser
 from bs4 import BeautifulSoup
