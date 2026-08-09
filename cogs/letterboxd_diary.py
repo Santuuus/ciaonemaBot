@@ -1,18 +1,17 @@
 import discord
 from discord import app_commands
 from discord.ext import commands, tasks
-import cloudscraper
 import feedparser
 from bs4 import BeautifulSoup
 from dateutil import parser
 from datetime import datetime, timezone
 import os
 from supabase import create_client, Client
+from curl_cffi import requests
 
 # --- Supabase Setup ---
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
@@ -44,30 +43,26 @@ class LetterboxdCog(commands.Cog):
                 pass
 
     def get_user_avatar(self, username: str) -> str:
-        url = f"https://letterboxd.com/{username.strip()}/"
+        url = f"https://letterboxd.com/{username}/"
         
-        # Create a scraper instance that bypasses Cloudflare
-        scraper = cloudscraper.create_scraper(
-            browser={
-                'browser': 'chrome',
-                'platform': 'windows',
-                'desktop': True
-            }
-        )
-
         try:
-            response = scraper.get(url, timeout=10)
+            # Impersonate a modern browser TLS signature
+            response = requests.get(url, impersonate="chrome120", timeout=10)
             
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, "html.parser")
                 
-                # Check og:image meta tag
-                meta_img = soup.find("meta", property="og:image")
-                if meta_img and meta_img.get("content"):
-                    avatar_url = meta_img["content"]
-                    if avatar_url.startswith("//"):
-                        return f"https:{avatar_url}"
-                    return avatar_url
+                # Strategy 1: OpenGraph image meta tag (contains avatar or default user image)
+                og_image = soup.find("meta", property="og:image")
+                if og_image and og_image.get("content"):
+                    return og_image["content"]
+                
+                # Strategy 2: Profile avatar container img tag
+                avatar_img = soup.select_one("div.profile-avatar img, section.profile-header img")
+                if avatar_img:
+                    src = avatar_img.get("src") or avatar_img.get("data-src")
+                    if src:
+                        return src
 
         except Exception as e:
             print(f"Error fetching avatar for {username}: {e}")

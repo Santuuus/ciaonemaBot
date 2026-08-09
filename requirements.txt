@@ -4,4 +4,4 @@ python-dateutil
 feedparser
 beautifulsoup4
 supabase
-cloudscraper
+curl_cffi
