@@ -77,6 +77,31 @@ class LetterboxdCog(commands.Cog):
             print(f"[AVATAR ERROR] {username}: {e}", flush=True)
 
         return None
+
+    def refresh_user_avatar(self, username: str):
+        clean_user = username.strip().lower()
+
+        # Fetch current avatar from Letterboxd
+        avatar_url = self.get_user_avatar(clean_user)
+
+        if not avatar_url:
+            print(f"[AVATAR] Could not retrieve avatar for {clean_user}")
+            return False
+
+        # Update avatar for all subscriptions belonging to this user
+        response = supabase.table("letterboxd_subscriptions").update({
+            "avatar_url": avatar_url
+        }).eq(
+            "username", clean_user
+        ).execute()
+
+        if response.data:
+            print(f"[AVATAR] Updated avatar for {clean_user}: {avatar_url}")
+            return True
+
+        print(f"[AVATAR] No subscriptions found for {clean_user}")
+        return False
+
     # --- Embed Helper ---
     def create_entry_embed(self, username: str, entry, avatar_url=None):
         # --- 1. Parse Metadata ---
