@@ -9,6 +9,11 @@ from dateutil import parser
 # zoneinfo is built into Python 3.9+ for proper timezone handling
 from zoneinfo import ZoneInfo 
 
+import os
+import re
+import requests
+from discord.ext import commands
+
 class MovieEvents(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -30,6 +35,16 @@ class MovieEvents(commands.Cog):
         release_date = data.get("release_date", "")
         year = release_date.split("-")[0] if release_date else "N/A"
         runtime = data.get("runtime", 0)
+        
+        # Extract genres from the TMDB genres list
+        genres_data = data.get("genres", [])
+        genre_names = [genre.get("name") for genre in genres_data if genre.get("name")]
+        
+        # Format genres into [Genre1,Genre2,...] or a fallback if none exist
+        if genre_names:
+            genres_str = f"[{','.join(genre_names)}]"
+        else:
+            genres_str = "[Desconhecido]"
         
         images_url = f"https://api.themoviedb.org/3/movie/{movie_id}/images?api_key={self.tmdb_api_key}"
         images_response = requests.get(images_url)
@@ -59,7 +74,14 @@ class MovieEvents(commands.Cog):
             if img_res.status_code == 200:
                 image_bytes = img_res.content
 
-        return {"name": f"{title} ({year})", "description": f"Runtime de {runtime} minutos.", "image": image_bytes}
+        # Description updated to include runtime and genres format
+        description = f"Runtime de {runtime} minutos. {genres_str}."
+
+        return {
+            "name": f"{title} ({year})", 
+            "description": description, 
+            "image": image_bytes
+        }
 
     @app_commands.command(name="schedule_movie", description="Creates a server movie event using a TMDB link.")
     @app_commands.default_permissions(administrator=True)
