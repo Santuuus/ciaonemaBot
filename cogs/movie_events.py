@@ -75,7 +75,7 @@ class MovieEvents(commands.Cog):
                 image_bytes = img_res.content
 
         # Description updated to include runtime and genres format
-        description = f"Runtime de {runtime} minutos. {genres_str}. [Letterboxd](https://letterboxd.com/tmdb/{movie_id})"
+        description = f"Runtime de {runtime} minutos. [[Letterboxd]](https://letterboxd.com/tmdb/{movie_id}) \n{genres_str} "
 
         return {
             "name": f"{title} ({year})", 
