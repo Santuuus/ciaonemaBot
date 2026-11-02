@@ -42,7 +42,7 @@ class MovieEvents(commands.Cog):
         
         # Format genres into [Genre1,Genre2,...] or a fallback if none exist
         if genre_names:
-            genres_str = f"[{','.join(genre_names)}]"
+            genres_str = f"[{', '.join(genre_names)}]"
         else:
             genres_str = "[Desconhecido]"
         
@@ -75,7 +75,7 @@ class MovieEvents(commands.Cog):
                 image_bytes = img_res.content
 
         # Description updated to include runtime and genres format
-        description = f"Runtime de {runtime} minutos. {genres_str}."
+        description = f"Runtime de {runtime} minutos. {genres_str}. [Letterboxd](https://letterboxd.com/tmdb/{movie_id})"
 
         return {
             "name": f"{title} ({year})", 
