@@ -19,9 +19,9 @@ class MovieEvents(commands.Cog):
         self.bot = bot
         self.tmdb_api_key = os.environ.get("TMDB_API_KEY")
 
-    def format_entry(runtime_min, tmdb_id, genres, sinopse, max_length=1000):
+    def format_entry(self, runtime_min, tmdb_id, genres, sinopse, max_length=1000):
         # Construct the base text without the synopsis
-        prefix = f"**Runtime:** {runtime_min} min. [Ver no :lb:](https://letterboxd.com/tmdb/{tmdb_id})\n**Genres:** {genres}\n"
+        prefix = f"**Runtime:** {runtime_min} min. [Ver no Letterboxd](https://letterboxd.com/tmdb/{tmdb_id})\n**Genres:** {genres}\n"
 
         # Calculate remaining characters allowed for the synopsis
         available = max_length - len(prefix)
