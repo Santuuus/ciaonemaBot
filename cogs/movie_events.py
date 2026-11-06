@@ -19,6 +19,19 @@ class MovieEvents(commands.Cog):
         self.bot = bot
         self.tmdb_api_key = os.environ.get("TMDB_API_KEY")
 
+    def format_entry(runtime_min, tmdb_id, genres, sinopse, max_length=1000):
+        # Construct the base text without the synopsis
+        prefix = f"**Runtime:** {runtime_min} min. [Ver no :lb:](https://letterboxd.com/tmdb/{tmdb_id})\n**Genres:** {genres}\n"
+
+        # Calculate remaining characters allowed for the synopsis
+        available = max_length - len(prefix)
+
+        if len(sinopse) > available:
+            # Trim and reserve 3 characters for the '...' ellipsis
+            sinopse = sinopse[: max(0, available - 3)] + "..."
+
+        return prefix + sinopse
+
     def get_movie_data(self, tmdb_url: str):
         match = re.search(r"/movie/(\d+)", tmdb_url)
         if not match:
@@ -75,7 +88,7 @@ class MovieEvents(commands.Cog):
                 image_bytes = img_res.content
 
         # Description updated to include runtime and genres format
-        description = f"Runtime de {runtime} minutos. [[Letterboxd]](https://letterboxd.com/tmdb/{movie_id}) \n{genres_str} "
+        description = self.format_entry(runtime, movie_id, genres_str, data.get("overview", "No description available."))
 
         return {
             "name": f"{title} ({year})", 
